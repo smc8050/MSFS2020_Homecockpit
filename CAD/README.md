@@ -1,3 +1,3 @@
 # CAD Directory
 
-This directory contains all information about the CAD files for the cockpit panel
+This directory will contain all information about the CAD files for the cockpit panel in the future...
