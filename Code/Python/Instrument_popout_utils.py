@@ -26,7 +26,7 @@ def popoutwindows(coordinates):
     pydirectinput.keyUp("alt")  # releases the alt key
     time.sleep(0.05)
     leftClick(coordinates.Expand_x,
-              coordinates.Expand_y)  # Split Popout into different windows (press magnifying glass in MSFS)
+              coordinates.Expand_y)  # Split popout into different windows (press magnifying glass in MSFS)
 
 
 def leftClick(x_pos, y_pos):
