@@ -20,9 +20,9 @@ def popoutwindows(coordinates):
 
     # time.sleep(5) #for debugging
     pydirectinput.keyDown("alt")  # Holds down the alt key
-    leftClick(coordinates.PFD_x, coordinates.PFD_y)  # Popout PFD
+    leftClick(coordinates.PFD_click_x, coordinates.PFD_click_y)  # Popout PFD
     time.sleep(0.05)
-    leftClick(coordinates.MFD_x, coordinates.MFD_y)  # Popout MFD
+    leftClick(coordinates.MFD_click_x, coordinates.MFD_click_y)  # Popout MFD
     pydirectinput.keyUp("alt")  # releases the alt key
     time.sleep(0.05)
     leftClick(coordinates.Expand_x,
@@ -56,10 +56,10 @@ def getpid(process_name):
     return int(list[0])
 
 
-def move_popoutwindows():
-    '''
-    This function moves the windows of the PFD and MFD G1000 to the specified cooredinates
-    TODO: read coordinates from file
+def move_popoutwindows(coordinates):
+    ''' Moves popout windows
+
+    This function moves the windows of the PFD and MFD G1000 to the specified coordinates (in the JSON)
     :return:
     '''
 
@@ -75,14 +75,14 @@ def move_popoutwindows():
         if name == '' and classname == 'AceApp':
             PopupWindow_Number.append(j - 1)  # save popup windowsnumber in List
     try:
-        Desktop(backend="win32").windows(process=FlightSim_PID)[PopupWindow_Number[0]].move_window(x=2700, y=2200,
-                                                                                                   width=1000,
-                                                                                                   height=800,
+        Desktop(backend="win32").windows(process=FlightSim_PID)[PopupWindow_Number[0]].move_window(x=coordinates.MFD_x, y=coordinates.MFD_y,
+                                                                                                   width=coordinates.MFD_width,
+                                                                                                   height=coordinates.MFD_height,
                                                                                                    repaint=True)
         print("moved MFD window")
-        Desktop(backend="win32").windows(process=FlightSim_PID)[PopupWindow_Number[1]].move_window(x=0, y=2200,
-                                                                                                   width=1000,
-                                                                                                   height=800,
+        Desktop(backend="win32").windows(process=FlightSim_PID)[PopupWindow_Number[1]].move_window(x=coordinates.PFD_x, y=coordinates.PFD_y,
+                                                                                                   width=coordinates.PFD_width,
+                                                                                                   height=coordinates.PFD_height,
                                                                                                    repaint=True)
         print("moved PFD window")
 
@@ -94,31 +94,42 @@ def move_popoutwindows():
 
 class instrument_coordinates():
     '''
-    This class reads the "click" coordinades depending on the currently selected airplane
+    This class reads the "click" coordinates depending on the currently selected airplane
     '''
 
-    def __init__(self, gui, file):
+    def __init__(self, AircraftRequests, file):
         with open(file, 'r') as myfile:
             data = myfile.read()
         obj = json.loads(data)
 
-        aircraft_model = self.getAircraftModel(gui)
+        aircraft_model = self.getAircraftModel(AircraftRequests)
 
-        self.PFD_x = int(obj[aircraft_model]["PFD_x"])
-        self.PFD_y = int(obj[aircraft_model]["PFD_y"])
-        self.MFD_x = int(obj[aircraft_model]["MFD_x"])
-        self.MFD_y = int(obj[aircraft_model]["MFD_y"])
-        self.Expand_x = int(obj[aircraft_model]["Expand_x"])
-        self.Expand_y = int(obj[aircraft_model]["Expand_y"])
+        self.PFD_click_x = int(obj["Aircraft"][aircraft_model]["PFD_x"])
+        self.PFD_click_y = int(obj["Aircraft"][aircraft_model]["PFD_y"])
+        self.MFD_click_x = int(obj["Aircraft"][aircraft_model]["MFD_x"])
+        self.MFD_click_y = int(obj["Aircraft"][aircraft_model]["MFD_y"])
 
-    def getAircraftModel(self, gui):
+        self.Expand_x = int(obj["Expand"]["Split"]["x"])
+        self.Expand_y = int(obj["Expand"]["Split"]["y"])
+
+        self.PFD_x = int(obj["Expand"]["PFD"]["x"])
+        self.PFD_y = int(obj["Expand"]["PFD"]["y"])
+        self.PFD_width = int(obj["Expand"]["PFD"]["width"])
+        self.PFD_height = int(obj["Expand"]["PFD"]["height"])
+
+        self.MFD_x = int(obj["Expand"]["MFD"]["x"])
+        self.MFD_y = int(obj["Expand"]["MFD"]["y"])
+        self.MFD_width = int(obj["Expand"]["MFD"]["width"])
+        self.MFD_height = int(obj["Expand"]["MFD"]["height"])
+
+    def getAircraftModel(self, AircraftRequests):
         '''
         This Function returns the current User-Aircraft model in the game
 
         :param gui: PyQt Window object
         :return: Aircraftmodel as string
         '''
-        model = gui.AircraftRequests.get("ATC_MODEL")
+        model = AircraftRequests.get("ATC_MODEL")
         model_shorted = str(model)[21:(len(str(model)) - 8)]
         print("Model is: " + model_shorted)
         return model_shorted
@@ -129,10 +140,10 @@ def setup_instrument_diplays(gui):
     When this function is called the windows are poped our in the Flight Sim with 3 Steps:
     1: get coordinates of where to click on the monitor
     2: Emulating a user interaction with the mouse to click on the displays tho pop them out to new windows
-    3: Moving and resizing the popped out windows TODO: reading coordinates from the file, now they are hardcoded
+    3: Moving and resizing the popped out windows
     :param gui:
     :return:
     """
-    coordinates = instrument_coordinates(gui, "instrument_displays.json")
+    coordinates = instrument_coordinates(gui.AircraftRequests, "instrument_displays.json")
     popoutwindows(coordinates)
-    move_popoutwindows()
+    move_popoutwindows(coordinates)
