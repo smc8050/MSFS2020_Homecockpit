@@ -85,6 +85,7 @@ class MyWindow(QMainWindow):
         StartSimConnect(self)
         self.readSerialThread()
 
+
     def Reconnect(self):
         """
         Under Cunstruction
@@ -137,12 +138,18 @@ class MyWindow(QMainWindow):
         self.AircraftEvents = None
         self.AircraftRequests = None
         self.runThread = True
+        #try:
+            #self.sm = SimConnect()
+            #self.aq = AircraftRequests(self.sm, _time=2000)
+        #except:
+            #print("Flight Simulator not running!")
+
 
         # set Gui icon folder
         self.gui_icon_folder = "gui_icons/"
 
         # GUI main dimensions and title
-        self.setGeometry(3000, 200, 430, 470)
+        self.setGeometry(1000, 200, 430, 470)
         self.setWindowTitle("Sim Connect Helper")
 
         # ConnectButton -> in Construction

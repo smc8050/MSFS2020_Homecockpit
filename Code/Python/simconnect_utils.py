@@ -139,7 +139,30 @@ def sendButtonCommand(mux, channel, gui, AircraftEvents):
     :return: Nothing
     '''
     config = get_config('cockpit_config.json')
-    executeCMD(str(config["ButtonCMD"][mux + "_" + channel]), gui, AircraftEvents)
+    executeCMD(str(config["Button_commands"][mux + "_" + channel]), gui, AircraftEvents)
+
+
+def sendEncoderCommand(encoder_number, rotation_direction, rotation_speed, gui):
+    # Lookup command in JSON here
+    config = get_config('cockpit_config.json')
+    command = str(config["Encoder_commands"][encoder_number])
+    if rotation_direction == "CW":
+        executeCMD(f"{command}_INC", gui, AircraftEvents)
+    elif rotation_direction == "CCW":
+        executeCMD(f"{command}_DEC", gui, AircraftEvents)
+
+    # Trigger a simple event
+    #target_altitude = 300
+    #event_to_trigger = gui.AircraftEvents.find("AP_ALT_VAR_SET_ENGLISH")
+    #event_to_trigger(target_altitude)
+
+    # Get the aircraft's current altitude
+    #altitude = gui.aq.get("AP_ALT")
+    #altitude = altitude + 3
+    # Set the aircraft's current altitude
+    #gui.aq.set("PLANE_ALTITUDE", altitude)
+
+
 
 
 def readJSON(file, chapter, value):
@@ -183,9 +206,6 @@ def executeCMD(cmd, gui, AircraftEvents):
     :return:
     '''
     try:
-        # Trigger a simple event
-        # event_to_trigger = gui.AircraftEvents.find(CMD) #OLD
-        # event_to_trigger() #OLD
         cmd_bytes = cmd.encode('utf-8')
         send_event = Event(cmd_bytes, SimConnect)
         send_event()
@@ -196,29 +216,39 @@ def executeCMD(cmd, gui, AircraftEvents):
         update_gui_cmd_status(gui, "ERROR", "red", cmd)
 
 
-
 class parseserial():
     ''' Parsing the Serial data
 
-        Reads the incoming serial strings and splits it into array
-        String Pattern: [Type].[Mux number].[Channel number].[State]
-        [Type] => S(Switch), B(Button), A/B(Encoder)
+        Reads the incoming serial strings and splits it into array:
+
+        String Pattern if Button or Switch: [Type].[Mux number].[Channel number].[State]
+        [Type] => S(Switch), B(Button)
         [Mux number] => Integer from 38 upwards
         [Channel number] => Integer from 0 to 15
         [State] => X if no state, 1/0 (ON/Off) if Switch
 
+        String Pattern if Encoder: [Type].[Encoder number].[CW/CCW]
+        [Type] => E(Encoder)
+        [Encoder number] => Encoder number
+        [CW/CCW] => Clockwise or Counterclockwise rotation
     '''
 
     def __init__(self, serialString):
-        if serialString != "Ready!":
-            # serialString = serialString[:-1]  # removes last char, so the string has now the format 38.1
+        if serialString != "Ready!":  # Ignoring the "Ready" String
             splittedString = serialString.split('.')
-            self.type = splittedString[0]
-            self.mux = splittedString[1]
-            self.channel = splittedString[2]
-            self.state = splittedString[3]
-            self.fullstring = serialString
-        else:
+            if splittedString[0] == "E":  # if incoming signal is Encoder
+                self.type = splittedString[0]
+                self.encodernumber = splittedString[1]
+                self.direction = splittedString[2]
+                self.speed = splittedString[3]
+                self.fullstring = serialString
+            elif splittedString[0] == "S" or splittedString[0] == "B":  # if incoming signal is Button or Switch
+                self.type = splittedString[0]
+                self.mux = splittedString[1]
+                self.channel = splittedString[2]
+                self.state = splittedString[3]
+                self.fullstring = serialString
+        else:#something weird happend if you get here?!
             self.type = 0
             self.mux = 0
             self.channel = 0
@@ -233,7 +263,7 @@ def readSerialArduino(gui, arduino, AircraftEvents):
             if data:
                 try:
                     receivedString = parseserial(data.decode('utf-8'))
-                    if receivedString.fullstring == "B.43.3.X": #This is a special button used to pop out the windows in the flight simulator
+                    if receivedString.fullstring == "B.43.3.X":  # This is a special button used to pop out the windows in the flight simulator
                         print("Setup Instrument displays")
                         setup_instrument_diplays(gui)
                         update_gui_cmd_status(gui, "Received", "green", "Setup instrument displays")
@@ -243,20 +273,16 @@ def readSerialArduino(gui, arduino, AircraftEvents):
                     elif receivedString.type == "S":  # call Switch routine
                         print(receivedString.fullstring)
                         sendSwitchCommand(receivedString.mux, receivedString.channel, receivedString.state, gui)
-                    elif receivedString.type == "A" or receivedString.type == "B":
-                        # TODO: call Encoder routine
-                        # encoder(receivedString.mux, receivedString.channel, receivedString.type)
-                        # print("Encoder: " + receivedString.mux + "_" + receivedString.channel +"-"+ receivedString.type )
+                    elif receivedString.type == "E":  # call Encoder routine
                         print(receivedString.fullstring)
+                        sendEncoderCommand(receivedString.encodernumber, receivedString.direction, receivedString.speed, gui)
                     else:
                         print("Connection to Arduino established!")
                 except:
-                    print("An exception occurred")
+                    print("An exception occurred while handling the serial string")
         except:
             print("No Connection to arduino, try to reconnect...")
             if arduino != None:
                 arduino.close()
             ConnectArduinoSerial(gui, 250000)
             time.sleep(2)
-
-
