@@ -50,13 +50,20 @@ void setup() {
   digitalWrite(s1, LOW);
   digitalWrite(s2, LOW);
   digitalWrite(s3, LOW);
-  
+
   //Set Signal Pins from all multiplexers (Pins 38-52) to input pullup
-  for (int i = 38; i < 53; i ++) {
+  for (int i = 38; i < 52; i ++) {
     pinMode(i, INPUT_PULLUP);
   }
-  
-  
+
+  // Set All Relais Pins to Output mode
+  int rows =  sizeof relaislist / sizeof relaislist[0];
+  for (int k = 0; k < rows; k ++) {
+    digitalWrite(relaislist[k][2], HIGH);//turn off all Relais
+    pinMode(relaislist[k][2], OUTPUT);
+  }
+
+
   //Define Setup for multiplexers -> could be done via seperate header
   //int encoder_setup[2][4] = {{41, 41, 0, 1}, {41, 41, 3, 4}};
   // calling constructor for each index of encoder array
@@ -112,6 +119,9 @@ int readButtonSwitches() {
             break;
           case 'S':
             switch_function(i, j);
+            break;
+          case 'R':
+            relais_function(i, j);
             break;
         }//Switch
       }//Loop
@@ -178,7 +188,6 @@ void readEncoder(int i) {
   if (encoder_arr[i].isRotating()) { //Encoder is rotating
     String dir;
     String velocity;
-
     if ((int)encoder_arr[i].getDirection() == 1) {
       dir = "CW";
       //Serial.print("CW ");
@@ -194,8 +203,7 @@ void readEncoder(int i) {
     } else {
       velocity = "ERROR";
     }
-    
-    Serial.println("E." + String(i) + "." + dir + "." + velocity);
+    Serial.println("E." + String(i + 1) + "." + dir + "." + velocity);
   }
 }//readEncoder
 
@@ -220,6 +228,22 @@ void switch_function(int i, int j) {
     } else {
       Serial.println("S." + String(i) + "." + String(j) + "." + "0");
       //Serial.println("Switch " + String(i) + "/" + String(j) + " flipped OFF!");
+    }
+  }
+}
+
+void relais_function(int i, int j) {
+  if (readMux(i, j) == 1 && channel_is_old(i - 38, j)) {
+    io_time[ i - 38 ][ j ] = millis();
+    io_states[ i - 38 ][ j ] = readMux(i, j);
+    io_states[ i - 38 ][ j ] = 0;
+    int rows =  sizeof relaislist / sizeof relaislist[0];
+    for (int k = 0; k < rows; k ++) {
+      if (relaislist[k][0] == i && relaislist[k][1] == j) {
+        digitalWrite(relaislist[k][2], LOW); //turn Relais ON
+        delay(50);
+        digitalWrite(relaislist[k][2], HIGH); //turn Relais OFF
+      }
     }
   }
 }

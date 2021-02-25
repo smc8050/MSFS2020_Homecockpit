@@ -5,12 +5,11 @@ import numpy as np
 #path of the input CSV:
 data_input_file = "Cockpit_config.CSV"
 #column headers of the CSV:
-csv_header = ["Arduino Pin","MUX channel","TYPE","Encoder Number","Sim Connect CMD"]
+csv_header = ["Arduino Pin","MUX channel","TYPE","Optional","Sim Connect CMD"]
 
 #following names should not be changed:
 header_filename = "cockpit_io.h"
 json_filename = "cockpit_config.json"
-
 
 
 class csv_column:
@@ -18,7 +17,7 @@ class csv_column:
     self.sig_pin = csv_header[0]
     self.mux_channel = csv_header[1]
     self.channel_type = csv_header[2]
-    self.encoder_number = csv_header[3]
+    self.option = csv_header[3]
     self.sim_connect_cmd = csv_header[4]
 
 csv_column = csv_column(csv_header)
@@ -42,6 +41,7 @@ def create_header_file(df, header_file_name):
 
     write_io_layout_array(df, header_file)
     write_encoderlist_array(df, header_file)
+    write_relaislist_array(df, header_file)
     create_empty_arrays(df, header_file)
 
     header_file.write('#endif')
@@ -65,7 +65,7 @@ def create_config_json(df,json_filename):
     for index, row in df.iterrows():
         if row[csv_column.channel_type] == 'B':
             key = (str(row[csv_column.sig_pin]) + "_" + str(row[csv_column.mux_channel]))
-            value = row[csv_column.encoder_number]
+            value = row[csv_column.option]
             button_cmd.update({key: value})
     cockpit_config["Button_commands"] = button_cmd
 
@@ -74,7 +74,7 @@ def create_config_json(df,json_filename):
     for index, row in df.iterrows():
         if row[csv_column.channel_type] == 'S':
             key = (str(row[csv_column.sig_pin]) + "_" + str(row[csv_column.mux_channel]))
-            value = row[csv_column.encoder_number]
+            value = row[csv_column.option]
             switch_cmd.update({key: value})
     cockpit_config["Switch_commands"] = switch_cmd
 
@@ -82,8 +82,8 @@ def create_config_json(df,json_filename):
     encoder_cmd = {}
     for index, row in df.iterrows():
         if row[csv_column.channel_type] == 'EA' or row[csv_column.channel_type] == 'EB':
-            key = (str(row[csv_column.encoder_number]))
-            value = (str(row[csv_column.encoder_number]))
+            key = (str(row[csv_column.option]))
+            value = (str(row[csv_column.option]))
             if key not in encoder_cmd and not key == 'nan':
                 encoder_cmd.update({key[:-2]: value})
     cockpit_config["Encoder_commands"] = encoder_cmd
@@ -154,10 +154,11 @@ def write_encoderlist_array(df, header_file):
     :param header_file: TextIOWrapper with open header file to write
 
     '''
-    encodercount = df[csv_column.encoder_number].unique().__len__()
+    allencoders = df.loc[df[csv_column.channel_type].str.contains('E')]
+    encodercount = allencoders[csv_column.option].unique().__len__()
     header_file.write(f"int encoderlist[ {encodercount} ][ 4 ] = \n{{\n")
     for i in range(1,encodercount,1):
-        selected_encoder = df.loc[df[csv_column.encoder_number] == i]
+        selected_encoder = df.loc[df[csv_column.option] == i]
         encoderA = selected_encoder.loc[df[csv_column.channel_type] == 'EA'][csv_column.mux_channel].values[0]
         encoderB = selected_encoder.loc[df[csv_column.channel_type] == 'EB'][csv_column.mux_channel].values[0]
         muxA = selected_encoder.loc[df[csv_column.channel_type] == 'EA'][csv_column.sig_pin].values[0]
@@ -167,6 +168,32 @@ def write_encoderlist_array(df, header_file):
         else: #if last encoder, add line and close array definition
             header_file.write(f'{{{muxA},{encoderA},{muxB},{encoderB}}} //Encoder {i}\n')
             header_file.write('};\n')
+
+def write_relaislist_array(df, header_file):
+    ''' writes the relaislist array to the header file
+
+    This function creates an array where each row contains following data:
+    {[MUX_A],[Channel_A],[MUX_A],[Channel_A]}
+
+    :param df: pandas dataframe with loaded csv information
+    :param header_file: TextIOWrapper with open header file to write
+
+    '''
+    allrelais = df.loc[df[csv_column.channel_type].str.contains('R')]
+    relaiscount = allrelais[csv_column.option].unique().__len__()
+    header_file.write(f"int relaislist[ {relaiscount} ][ 3 ] = \n{{\n")
+    i =0
+    for index, row in allrelais.iterrows():
+        selected_relais = allrelais.loc[allrelais[csv_column.option] == i]
+        mux = row[0]
+        channel = row[1]
+        relais_pin = int(row[3])
+        if i != relaiscount-1: #if not last encoder, add new line to array
+            header_file.write(f'{{{mux},{channel},{relais_pin}}}, //Relais {i}\n')
+        else: #if last encoder, add line and close array definition
+            header_file.write(f'{{{mux},{channel},{relais_pin}}} //Relais {i}\n')
+            header_file.write('};\n')
+        i += 1
 
 
 def create_instrument_json(df):
