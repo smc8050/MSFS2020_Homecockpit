@@ -1,5 +1,5 @@
-#ifndef cockpit_io.h 
-#define cockpit_io.h
+#ifndef C:\Users\Steivan\PycharmProjects\MSFS2020_Homecockpit\Code\Arduino\cockpit_interface\cockpit_io.h 
+#define C:\Users\Steivan\PycharmProjects\MSFS2020_Homecockpit\Code\Arduino\cockpit_interface\cockpit_io.h
 char io_layout[9][16] = {
 {'B','B','E','B','E','E','E','B','B','B','B','B','X','E','E','B'}, // MUX 38
 {'B','B','B','B','B','B','B','B','B','B','B','B','B','B','B','B'}, // MUX 39

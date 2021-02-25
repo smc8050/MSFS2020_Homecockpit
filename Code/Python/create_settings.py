@@ -8,7 +8,7 @@ data_input_file = "Cockpit_config.CSV"
 csv_header = ["Arduino Pin","MUX channel","TYPE","Optional","Sim Connect CMD"]
 
 #following names should not be changed:
-header_filename = "cockpit_io.h"
+header_filename = r"C:\Users\Steivan\PycharmProjects\MSFS2020_Homecockpit\Code\Arduino\cockpit_interface\cockpit_io.h"
 json_filename = "cockpit_config.json"
 
 
@@ -83,7 +83,7 @@ def create_config_json(df,json_filename):
     for index, row in df.iterrows():
         if row[csv_column.channel_type] == 'EA' or row[csv_column.channel_type] == 'EB':
             key = (str(row[csv_column.option]))
-            value = (str(row[csv_column.option]))
+            value = (str(row[csv_column.sim_connect_cmd]))
             if key not in encoder_cmd and not key == 'nan':
                 encoder_cmd.update({key[:-2]: value})
     cockpit_config["Encoder_commands"] = encoder_cmd
@@ -201,7 +201,6 @@ def create_instrument_json(df):
     print("creating_instrument")
 
 def create_empty_arrays(df, header_file):
-    print("creating_instrument")
     mux_count = df[csv_column.sig_pin].unique().__len__()
     header_file.write(f"int io_states[{mux_count}][16];\n")
     header_file.write(f"int io_time[{mux_count}][16];\n")
